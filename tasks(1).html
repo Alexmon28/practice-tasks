@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Задания</title>
+</head>
+<body>
+<h1>Задания</h1>
+<script>
+function fillArray(length, min, max) {
+  var arr = [];
+  for (var i = 0; i < length; i++) {
+    arr.push(Math.floor(Math.random() * (max - min + 1)) + min);
+  }
+  return arr;
+}
+
+function sortUp(arr) {
+  return arr.slice().sort(function (a, b) { return a - b; });
+}
+
+function sortDown(arr) {
+  return arr.slice().sort(function (a, b) { return b - a; });
+}
+
+function bindMessage(record) {
+  return "Здравствуйте, " + record.patient + "!\n" +
+    "Вы записаны к врачу: " + record.doctor + " (" + record.speciality + ")\n" +
+    "Дата: " + record.date + "\n" +
+    "Время: " + record.time + "\n" +
+    "Кабинет: " + record.room;
+}
+
+function encrypt(str) {
+  var hash = 5381;
+  for (var i = 0; i < str.length; i++) {
+    hash = (hash * 33 + str.charCodeAt(i)) % 4294967296;
+  }
+  return hash.toString(16);
+}
+
+function getKey(isAuth) {
+  if (isAuth !== true) {
+    return null;
+  }
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function (c) {
+    var r = Math.floor(Math.random() * 16);
+    if (c === "y") {
+      r = (r % 4) + 8;
+    }
+    return r.toString(16);
+  });
+}
+
+function saveKeyToCookie(key) {
+  document.cookie = "key=" + key + "; path=/";
+}
+
+function fakeRegister(login, password) {
+  localStorage.setItem("login", login);
+  localStorage.setItem("password", encrypt(password));
+  return "Регистрация прошла успешно";
+}
+
+function fakeLogin(login, password) {
+  if (login === localStorage.getItem("login") && encrypt(password) === localStorage.getItem("password")) {
+    var key = getKey(true);
+    saveKeyToCookie(key);
+    return "Вход выполнен, ключ: " + key;
+  }
+  return "Неверный логин или пароль";
+}
+
+function reverseString(str) {
+  var result = "";
+  for (var i = str.length - 1; i >= 0; i--) {
+    result += str[i];
+  }
+  return result;
+}
+
+function isPalindrome(str) {
+  var clean = str.toLowerCase().replace(/[^a-zа-яё0-9]/g, "");
+  return clean === reverseString(clean);
+}
+
+function unique(arr) {
+  var result = [];
+  for (var i = 0; i < arr.length; i++) {
+    if (result.indexOf(arr[i]) === -1) {
+      result.push(arr[i]);
+    }
+  }
+  return result;
+}
+
+function onlyPositive(arr) {
+  var result = [];
+  for (var i = 0; i < arr.length; i++) {
+    if (arr[i] > 0) {
+      result.push(arr[i]);
+    }
+  }
+  return result;
+}
+
+function sumAndAverage(arr) {
+  var sum = 0;
+  for (var i = 0; i < arr.length; i++) {
+    sum += arr[i];
+  }
+  var average = 0;
+  if (arr.length > 0) {
+    average = sum / arr.length;
+  }
+  return { sum: sum, average: average };
+}
+
+function max3(a, b, c) {
+  var max = a;
+  if (b > max) max = b;
+  if (c > max) max = c;
+  return max;
+}
+
+function evenOrOdd(n) {
+  if (n % 2 === 0) {
+    return "чётное";
+  }
+  return "нечётное";
+}
+
+function countWords(str) {
+  var result = {};
+  var words = str.toLowerCase().split(" ");
+  for (var i = 0; i < words.length; i++) {
+    if (words[i] === "") {
+      continue;
+    }
+    if (result[words[i]] === undefined) {
+      result[words[i]] = 1;
+    } else {
+      result[words[i]]++;
+    }
+  }
+  return result;
+}
+
+function secondMax(arr) {
+  var u = unique(arr);
+  if (u.length < 2) {
+    return null;
+  }
+  return sortDown(u)[1];
+}
+
+function averageScore(scores) {
+  if (scores.length === 0) {
+    return 0;
+  }
+  var sum = 0;
+  for (var i = 0; i < scores.length; i++) {
+    sum += scores[i];
+  }
+  return Math.round(sum / scores.length * 100) / 100;
+}
+
+function translit(str) {
+  var map = {
+    "а": "a", "б": "b", "в": "v", "г": "g", "д": "d", "е": "e", "ё": "yo",
+    "ж": "zh", "з": "z", "и": "i", "й": "y", "к": "k", "л": "l", "м": "m",
+    "н": "n", "о": "o", "п": "p", "р": "r", "с": "s", "т": "t", "у": "u",
+    "ф": "f", "х": "h", "ц": "ts", "ч": "ch", "ш": "sh", "щ": "sch",
+    "ъ": "", "ы": "y", "ь": "", "э": "e", "ю": "yu", "я": "ya"
+  };
+  var result = "";
+  for (var i = 0; i < str.length; i++) {
+    var letter = str[i].toLowerCase();
+    if (map[letter] === undefined) {
+      result += str[i];
+    } else if (str[i] === letter) {
+      result += map[letter];
+    } else {
+      result += map[letter].charAt(0).toUpperCase() + map[letter].slice(1);
+    }
+  }
+  return result;
+}
+
+function shortName(fio) {
+  var parts = fio.trim().split(" ");
+  var result = parts[0];
+  if (parts[1]) {
+    result += " " + parts[1][0].toUpperCase() + ".";
+  }
+  if (parts[2]) {
+    result += parts[2][0].toUpperCase() + ".";
+  }
+  return result;
+}
+
+function groupByAge(people) {
+  var result = {};
+  for (var i = 0; i < people.length; i++) {
+    var age = people[i].age;
+    if (result[age] === undefined) {
+      result[age] = [];
+    }
+    result[age].push(people[i]);
+  }
+  return result;
+}
+
+function generatePassword(length) {
+  var chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%";
+  var password = "";
+  for (var i = 0; i < length; i++) {
+    password += chars[Math.floor(Math.random() * chars.length)];
+  }
+  return password;
+}
+
+function isIntersect(arr1, arr2) {
+  for (var i = 0; i < arr1.length; i++) {
+    if (arr2.indexOf(arr1[i]) !== -1) {
+      return true;
+    }
+  }
+  return false;
+}
+
+var arr = fillArray(8, 1, 50);
+console.log(arr);
+console.log(sortUp(arr), sortDown(arr));
+console.log(bindMessage({ patient: "Иван Иванов", doctor: "Петрова А.С.", speciality: "терапевт", date: "20.10.2026", time: "10:30", room: "214" }));
+console.log(encrypt("hello"));
+console.log(getKey(true), getKey(false));
+console.log(fakeRegister("L", "12345"));
+console.log(fakeLogin("L", "12345"));
+console.log(fakeLogin("L", "00000"));
+console.log(document.cookie);
+console.log(reverseString("привет"));
+console.log(isPalindrome("А роза упала на лапу Азора"), isPalindrome("привет"));
+
+console.log(unique([1, 2, 2, 3, 1, 4]));
+console.log(onlyPositive([-5, 3, 0, 8, -1]));
+console.log(sumAndAverage([1, 2, 3, 4]));
+console.log(max3(4, 9, 2));
+console.log(evenOrOdd(7), evenOrOdd(10));
+console.log(countWords("да нет да может нет да"));
+console.log(secondMax([5, 5, 3, 9, 9]), secondMax([4, 4, 4]));
+console.log(averageScore([5, 4, 4, 5, 3]));
+console.log(translit("Привет, Иван Щукин"));
+console.log(shortName("Иванов Иван Иванович"));
+console.log(groupByAge([{ name: "Аня", age: 20 }, { name: "Боря", age: 21 }, { name: "Вика", age: 20 }]));
+console.log(generatePassword(12));
+console.log(isIntersect([1, 2, 3], [3, 4]), isIntersect([1, 2], [5, 6]));
+</script>
+</body>
+</html>
