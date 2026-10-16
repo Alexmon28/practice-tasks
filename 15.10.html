@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>HTTP-запросы: fetch и axios</title>
+<script src="https://cdn.jsdelivr.net/npm/axios@1.7.2/dist/axios.min.js"></script>
+</head>
+<body>
+<h1>HTTP-запросы</h1>
+<p>Результаты 1-7 смотри в консоли (F12).</p>
+
+<h2>Список задач</h2>
+<label><input type="checkbox" id="useAxios"> использовать axios</label><br><br>
+<input id="title" placeholder="Новая задача">
+<button onclick="addTodo()">Добавить</button>
+<button onclick="loadTodos()">Загрузить заново</button>
+<ul id="list"></ul>
+
+<script>
+var url = "https://jsonplaceholder.typicode.com";
+
+function wait(ms) {
+  return new Promise(function (resolve) {
+    setTimeout(resolve, ms);
+  });
+}
+
+function getErrorText(error) {
+  if (!navigator.onLine) {
+    return "Нет подключения к интернету";
+  }
+  return "Ошибка: " + error.message;
+}
+
+window.addEventListener("offline", function () {
+  console.log("Интернет пропал");
+});
+
+window.addEventListener("online", function () {
+  console.log("Интернет появился");
+});
+
+async function sendFetch(method, path, data) {
+  var options = { method: method };
+  if (data) {
+    options.headers = { "Content-Type": "application/json" };
+    options.body = JSON.stringify(data);
+  }
+  var response = await fetch(url + path, options);
+  if (!response.ok) {
+    throw new Error("Статус " + response.status);
+  }
+  return await response.json();
+}
+
+async function getAxios(path) {
+  var response = await axios.get(url + path);
+  return response.data;
+}
+
+async function task1Fetch() {
+  var response = await fetch(url + "/users");
+  var users = await response.json();
+  console.log("fetch 1:", users);
+}
+
+async function task2Fetch() {
+  try {
+    await sendFetch("GET", "/wrong");
+  } catch (error) {
+    console.log("fetch 2:", getErrorText(error));
+  }
+}
+
+async function task3Fetch() {
+  var post = await sendFetch("POST", "/posts", { title: "Привет", body: "Текст поста", userId: 1 });
+  console.log("fetch 3:", post);
+}
+
+async function task4Fetch() {
+  var results = await Promise.all([
+    sendFetch("GET", "/users"),
+    sendFetch("GET", "/posts"),
+    sendFetch("GET", "/todos")
+  ]);
+  console.log("fetch 4: users", results[0].length, "posts", results[1].length, "todos", results[2].length);
+}
+
+async function task5Fetch() {
+  var results = await Promise.allSettled([
+    sendFetch("GET", "/users"),
+    sendFetch("GET", "/posts"),
+    sendFetch("GET", "/todos"),
+    sendFetch("GET", "/albums"),
+    sendFetch("GET", "/wrong")
+  ]);
+  for (var i = 0; i < results.length; i++) {
+    if (results[i].status === "fulfilled") {
+      console.log("fetch 5: запрос " + (i + 1) + " успех, элементов", results[i].value.length);
+    } else {
+      console.log("fetch 5: запрос " + (i + 1) + " ошибка:", results[i].reason.message);
+    }
+  }
+}
+
+async function getWithTimeoutFetch(fullUrl, ms) {
+  var controller = new AbortController();
+  var timer = setTimeout(function () {
+    controller.abort();
+  }, ms);
+  try {
+    var response = await fetch(fullUrl, { signal: controller.signal });
+    if (!response.ok) {
+      throw new Error("Статус " + response.status);
+    }
+    return await response.json();
+  } catch (error) {
+    if (error.name === "AbortError") {
+      throw new Error("Время вышло: " + ms + " мс");
+    }
+    throw error;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function task6Fetch() {
+  try {
+    await getWithTimeoutFetch(url + "/users", 1);
+  } catch (error) {
+    console.log("fetch 6:", error.message);
+  }
+  var users = await getWithTimeoutFetch(url + "/users", 5000);
+  console.log("fetch 6: успешно, пользователей", users.length);
+}
+
+async function getWithRetryFetch(path, times) {
+  for (var i = 1; i <= times; i++) {
+    try {
+      return await sendFetch("GET", path);
+    } catch (error) {
+      console.log("fetch 7: попытка " + i + " не удалась");
+      if (i === times) {
+        throw error;
+      }
+      await wait(500);
+    }
+  }
+}
+
+async function task7Fetch() {
+  try {
+    await getWithRetryFetch("/wrong", 3);
+  } catch (error) {
+    console.log("fetch 7:", getErrorText(error));
+  }
+}
+
+async function task1Axios() {
+  var response = await axios.get(url + "/users");
+  console.log("axios 1:", response.data);
+}
+
+async function task2Axios() {
+  try {
+    await getAxios("/wrong");
+  } catch (error) {
+    console.log("axios 2:", getErrorText(error));
+  }
+}
+
+async function task3Axios() {
+  var response = await axios.post(url + "/posts", { title: "Привет", body: "Текст поста", userId: 1 });
+  console.log("axios 3:", response.data);
+}
+
+async function task4Axios() {
+  var results = await Promise.all([
+    getAxios("/users"),
+    getAxios("/posts"),
+    getAxios("/todos")
+  ]);
+  console.log("axios 4: users", results[0].length, "posts", results[1].length, "todos", results[2].length);
+}
+
+async function task5Axios() {
+  var results = await Promise.allSettled([
+    getAxios("/users"),
+    getAxios("/posts"),
+    getAxios("/todos"),
+    getAxios("/albums"),
+    getAxios("/wrong")
+  ]);
+  for (var i = 0; i < results.length; i++) {
+    if (results[i].status === "fulfilled") {
+      console.log("axios 5: запрос " + (i + 1) + " успех, элементов", results[i].value.length);
+    } else {
+      console.log("axios 5: запрос " + (i + 1) + " ошибка:", results[i].reason.message);
+    }
+  }
+}
+
+async function getWithTimeoutAxios(fullUrl, ms) {
+  var controller = new AbortController();
+  var timer = setTimeout(function () {
+    controller.abort();
+  }, ms);
+  try {
+    var response = await axios.get(fullUrl, { signal: controller.signal });
+    return response.data;
+  } catch (error) {
+    if (error.code === "ERR_CANCELED") {
+      throw new Error("Время вышло: " + ms + " мс");
+    }
+    throw error;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function task6Axios() {
+  try {
+    await getWithTimeoutAxios(url + "/users", 1);
+  } catch (error) {
+    console.log("axios 6:", error.message);
+  }
+  var users = await getWithTimeoutAxios(url + "/users", 5000);
+  console.log("axios 6: успешно, пользователей", users.length);
+}
+
+async function getWithRetryAxios(path, times) {
+  for (var i = 1; i <= times; i++) {
+    try {
+      return await getAxios(path);
+    } catch (error) {
+      console.log("axios 7: попытка " + i + " не удалась");
+      if (i === times) {
+        throw error;
+      }
+      await wait(500);
+    }
+  }
+}
+
+async function task7Axios() {
+  try {
+    await getWithRetryAxios("/wrong", 3);
+  } catch (error) {
+    console.log("axios 7:", getErrorText(error));
+  }
+}
+
+var todos = [];
+var nextId = 201;
+
+function isAxios() {
+  return document.getElementById("useAxios").checked;
+}
+
+function findTodo(id) {
+  for (var i = 0; i < todos.length; i++) {
+    if (todos[i].id === id) {
+      return todos[i];
+    }
+  }
+}
+
+function render() {
+  var list = document.getElementById("list");
+  list.innerHTML = "";
+  for (var i = 0; i < todos.length; i++) {
+    var todo = todos[i];
+    var li = document.createElement("li");
+    li.innerHTML = '<input type="checkbox" onchange="toggleTodo(' + todo.id + ')"> <span></span> ' +
+      '<button onclick="editTodo(' + todo.id + ')">Изменить</button> ' +
+      '<button onclick="deleteTodo(' + todo.id + ')">Удалить</button>';
+    li.querySelector("input").checked = todo.completed;
+    var span = li.querySelector("span");
+    span.textContent = todo.title;
+    if (todo.completed) {
+      span.style.textDecoration = "line-through";
+    }
+    list.appendChild(li);
+  }
+}
+
+async function loadTodos() {
+  try {
+    if (isAxios()) {
+      todos = await getAxios("/todos?_limit=5");
+    } else {
+      todos = await sendFetch("GET", "/todos?_limit=5");
+    }
+    render();
+  } catch (error) {
+    alert(getErrorText(error));
+  }
+}
+
+async function addTodo() {
+  var input = document.getElementById("title");
+  var title = input.value.trim();
+  if (title === "") {
+    return;
+  }
+  var data = { title: title, completed: false, userId: 1 };
+  try {
+    var todo;
+    if (isAxios()) {
+      var response = await axios.post(url + "/todos", data);
+      todo = response.data;
+    } else {
+      todo = await sendFetch("POST", "/todos", data);
+    }
+    todo.id = nextId;
+    nextId++;
+    todos.push(todo);
+    input.value = "";
+    render();
+  } catch (error) {
+    alert(getErrorText(error));
+  }
+}
+
+async function updateTodo(id, data) {
+  var todo = findTodo(id);
+  try {
+    if (id <= 200) {
+      if (isAxios()) {
+        await axios.patch(url + "/todos/" + id, data);
+      } else {
+        await sendFetch("PATCH", "/todos/" + id, data);
+      }
+    }
+    if (data.title !== undefined) {
+      todo.title = data.title;
+    }
+    if (data.completed !== undefined) {
+      todo.completed = data.completed;
+    }
+  } catch (error) {
+    alert(getErrorText(error));
+  }
+  render();
+}
+
+function toggleTodo(id) {
+  updateTodo(id, { completed: !findTodo(id).completed });
+}
+
+function editTodo(id) {
+  var title = prompt("Новое название:", findTodo(id).title);
+  if (title) {
+    updateTodo(id, { title: title });
+  }
+}
+
+async function deleteTodo(id) {
+  try {
+    if (id <= 200) {
+      if (isAxios()) {
+        await axios.delete(url + "/todos/" + id);
+      } else {
+        await sendFetch("DELETE", "/todos/" + id);
+      }
+    }
+    for (var i = 0; i < todos.length; i++) {
+      if (todos[i].id === id) {
+        todos.splice(i, 1);
+        break;
+      }
+    }
+    render();
+  } catch (error) {
+    alert(getErrorText(error));
+  }
+}
+
+async function runAll() {
+  try {
+    await task1Fetch();
+    await task2Fetch();
+    await task3Fetch();
+    await task4Fetch();
+    await task5Fetch();
+    await task6Fetch();
+    await task7Fetch();
+    await task1Axios();
+    await task2Axios();
+    await task3Axios();
+    await task4Axios();
+    await task5Axios();
+    await task6Axios();
+    await task7Axios();
+  } catch (error) {
+    console.log(getErrorText(error));
+  }
+}
+
+runAll();
+loadTodos();
+</script>
+</body>
+</html>
